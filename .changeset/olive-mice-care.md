@@ -1,3 +1,4 @@
+---
 "bloodhound-cli": minor
 ---
 
