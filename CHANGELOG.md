@@ -1,5 +1,11 @@
 # bloodhound-cli
 
+## 1.1.1
+
+### Patch Changes
+
+- 996a75c: Trigger a follow-up release after normalizing repository version state to 1.1.0.
+
 ## 1.1.0
 
 ### Minor Changes
