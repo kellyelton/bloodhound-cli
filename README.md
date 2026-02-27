@@ -70,3 +70,17 @@ export BLOODHOUND_CLI_CONFIG=/path/to/config.json
 ```bash
 npm test
 ```
+
+## Versioning (Changesets)
+
+This repo uses Changesets for release versioning.
+
+```bash
+# create a changeset for your commit
+npm run changeset
+
+# apply pending version bumps locally
+npm run version-packages
+```
+
+A git `pre-commit` hook is installed automatically (`npm install`) and blocks commits unless a `.changeset/*.md` file is staged.
