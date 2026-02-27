@@ -20,8 +20,7 @@
   "license": "MIT",
   "type": "commonjs",
   "bin": {
-    "bloodhound": "./bin/bloodhound.js",
-    "Bloodhound": "./bin/bloodhound.js"
+    "bloodhound": "./bin/bloodhound.js"
   },
   "engines": {
     "node": ">=20.0.0"

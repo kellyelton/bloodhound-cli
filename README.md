@@ -12,7 +12,6 @@ Run it as either:
 
 ```bash
 bloodhound --help
-Bloodhound --help
 ```
 
 ## Command Model
@@ -58,8 +57,7 @@ bloodhound guess 9400110200881234567890
 
 Configuration is stored in:
 
-- Linux/macOS: `~/.config/bloodhound-cli/config.json`
-- Windows: `%APPDATA%\\bloodhound-cli\\config.json`
+- All platforms: `~/.config/bloodhound/bloodhound.json`
 
 Override path with:
 

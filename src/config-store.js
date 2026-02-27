@@ -2,17 +2,12 @@ const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
 
-function defaultConfigPath(env = process.env) {
+function defaultConfigPath(env = process.env, osModule = os) {
     if (env.BLOODHOUND_CLI_CONFIG && env.BLOODHOUND_CLI_CONFIG.trim()) {
         return env.BLOODHOUND_CLI_CONFIG;
     }
 
-    if (process.platform === 'win32') {
-        const appData = env.APPDATA || path.join(os.homedir(), 'AppData', 'Roaming');
-        return path.join(appData, 'bloodhound-cli', 'config.json');
-    }
-
-    return path.join(os.homedir(), '.config', 'bloodhound-cli', 'config.json');
+    return path.join(osModule.homedir(), '.config', 'bloodhound', 'bloodhound.json');
 }
 
 async function readConfig(configPath) {
