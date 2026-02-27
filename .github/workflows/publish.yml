@@ -1,9 +1,8 @@
 name: Publish
 
 on:
-  workflow_dispatch:
-  release:
-    types: [published]
+  push:
+    branches: [main]
 
 jobs:
   publish:
@@ -21,14 +20,27 @@ jobs:
         with:
           node-version: 22
           registry-url: https://registry.npmjs.org
+          cache: npm
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Test
         run: npm test
 
       - name: Publish to npm
-        run: npm publish --access public
+        run: |
+          PKG_NAME=$(node -p "require('./package.json').name")
+          LOCAL_VERSION=$(node -p "require('./package.json').version")
+          PUBLISHED_VERSION=$(npm view "$PKG_NAME" version --registry=https://registry.npmjs.org/ 2>/dev/null || echo "")
+
+          echo "pkg=$PKG_NAME published=$PUBLISHED_VERSION local=$LOCAL_VERSION"
+
+          if [ "$PUBLISHED_VERSION" = "$LOCAL_VERSION" ]; then
+            echo "Already published; skipping npm publish."
+            exit 0
+          fi
+
+          npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
