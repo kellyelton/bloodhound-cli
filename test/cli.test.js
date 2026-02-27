@@ -31,10 +31,10 @@ async function withTempConfig(testBody) {
     await fs.rm(tmpDir, { recursive: true, force: true });
 }
 
-test('config set/get/delete/list CRUDs provider keys', async () => {
+test('config set/get/delete/list CRUDs provider keys via provider-specific flags', async () => {
     await withTempConfig(async (configPath) => {
         const capture = ioCapture();
-        let code = await runCli(['config', 'set', 'ups', 'client_id', 'abc123'], {
+        let code = await runCli(['config', 'set', 'ups', '--client-id', 'abc123', '--client-secret', 'shh'], {
             io: capture.io,
             configPath,
             createBloodhound: () => {
@@ -43,7 +43,7 @@ test('config set/get/delete/list CRUDs provider keys', async () => {
         });
         assert.equal(code, 0);
 
-        code = await runCli(['config', 'get', 'ups', 'client_id'], {
+        code = await runCli(['config', 'get', 'ups', 'client-id'], {
             io: capture.io,
             configPath,
             createBloodhound: () => {
@@ -63,7 +63,7 @@ test('config set/get/delete/list CRUDs provider keys', async () => {
         assert.equal(code, 0);
         assert.match(capture.getStdout(), /ups/);
 
-        code = await runCli(['config', 'delete', 'ups', 'client_id'], {
+        code = await runCli(['config', 'delete', 'ups', 'client-id'], {
             io: capture.io,
             configPath,
             createBloodhound: () => {
@@ -72,6 +72,37 @@ test('config set/get/delete/list CRUDs provider keys', async () => {
         });
         assert.equal(code, 0);
     });
+});
+
+test('config set validates required provider-specific fields', async () => {
+    await withTempConfig(async (configPath) => {
+        const capture = ioCapture();
+        const code = await runCli(['config', 'set', 'usps', '--consumer-key', 'abc-only'], {
+            io: capture.io,
+            configPath,
+            createBloodhound: () => {
+                throw new Error('should not instantiate bloodhound for config commands');
+            }
+        });
+
+        assert.equal(code, 1);
+        assert.match(capture.getStderr(), /consumer-secret/i);
+    });
+});
+
+test('config requirements shows provider-required fields', async () => {
+    const capture = ioCapture();
+    const code = await runCli(['config', 'requirements', 'fedex', '--output', 'json'], {
+        io: capture.io,
+        createBloodhound: () => {
+            throw new Error('should not instantiate bloodhound for config commands');
+        }
+    });
+
+    assert.equal(code, 0);
+    const parsed = JSON.parse(capture.getStdout());
+    assert.equal(parsed.provider, 'fedEx');
+    assert.deepEqual(parsed.requiredFlags, ['--api-key', '--secret-key']);
 });
 
 test('guess prints JSON by default', async () => {

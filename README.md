@@ -8,7 +8,7 @@ Agent-friendly CLI wrapper for `@stores.com/bloodhound` to guess carriers, track
 npm install -g bloodhound-cli
 ```
 
-Run it as either:
+Run it with:
 
 ```bash
 bloodhound --help
@@ -25,6 +25,7 @@ Core commands:
 - `track <tracking-number>`: track package and return normalized data
 - `guess <tracking-number>`: infer carrier from tracking number
 - `carriers list`: show supported carriers/providers
+- `config requirements <provider>`: show required credential fields for a provider
 - `config set/get/delete/list`: CRUD provider credential settings
 
 ## Output and Error Modes
@@ -40,8 +41,13 @@ Examples:
 
 ```bash
 # Configure UPS credentials
-bloodhound config set ups client_id "$UPS_CLIENT_ID"
-bloodhound config set ups client_secret "$UPS_CLIENT_SECRET"
+bloodhound config set ups --client-id "$UPS_CLIENT_ID" --client-secret "$UPS_CLIENT_SECRET"
+
+# Show required fields for a provider
+bloodhound config requirements usps
+
+# Configure USPS credentials
+bloodhound config set usps --consumer-key "$USPS_CONSUMER_KEY" --consumer-secret "$USPS_CONSUMER_SECRET"
 
 # Track with automatic carrier detection
 bloodhound track 1Z999AA10123456784

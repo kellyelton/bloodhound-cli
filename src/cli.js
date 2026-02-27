@@ -16,6 +16,81 @@ const CARRIER_ALIASES = {
     dhl_ecommerce_solutions: 'dhlEcommerceSolutions'
 };
 
+const PROVIDER_CONFIG_SPECS = {
+    amazon: {
+        fields: [],
+        required: []
+    },
+    dhl: {
+        fields: [
+            { flag: 'api-key', key: 'apiKey', label: 'API Key' }
+        ],
+        required: ['api-key']
+    },
+    fedEx: {
+        fields: [
+            { flag: 'api-key', key: 'api_key', label: 'API Key' },
+            { flag: 'secret-key', key: 'secret_key', label: 'Secret Key' }
+        ],
+        required: ['api-key', 'secret-key']
+    },
+    gofo: {
+        fields: [],
+        required: []
+    },
+    onTrac: {
+        fields: [],
+        required: []
+    },
+    pitneyBowes: {
+        fields: [],
+        required: []
+    },
+    ups: {
+        fields: [
+            { flag: 'client-id', key: 'client_id', label: 'Client ID' },
+            { flag: 'client-secret', key: 'client_secret', label: 'Client Secret' }
+        ],
+        required: ['client-id', 'client-secret']
+    },
+    usps: {
+        fields: [
+            { flag: 'consumer-key', key: 'consumer_key', label: 'Consumer Key' },
+            { flag: 'consumer-secret', key: 'consumer_secret', label: 'Consumer Secret' }
+        ],
+        required: ['consumer-key', 'consumer-secret']
+    },
+    xpo: {
+        fields: [
+            { flag: 'api-key', key: 'api_key', label: 'API Key' },
+            { flag: 'username', key: 'username', label: 'Username' },
+            { flag: 'password', key: 'password', label: 'Password' }
+        ],
+        required: ['api-key', 'username', 'password']
+    },
+    geocoder: {
+        fields: [
+            { flag: 'api-key', key: 'apiKey', label: 'API Key' },
+            { flag: 'provider', key: 'provider', label: 'Provider' },
+            { flag: 'language', key: 'language', label: 'Language' },
+            { flag: 'region', key: 'region', label: 'Region' }
+        ],
+        required: []
+    },
+    pettyCache: {
+        fields: [
+            { flag: 'host', key: 'host', label: 'Host' },
+            { flag: 'port', key: 'port', label: 'Port' },
+            { flag: 'auth-pass', key: 'options.auth_pass', label: 'Auth Pass' }
+        ],
+        required: []
+    },
+    dhlEcommerceSolutions: {
+        fields: [],
+        required: []
+    }
+};
+
 class CliError extends Error {
     constructor(message, code, details) {
         super(message);
@@ -34,12 +109,89 @@ function normalizeProvider(input) {
     return CARRIER_ALIASES[key];
 }
 
-function parseFlags(args) {
+function normalizeFieldToken(input) {
+    return String(input || '')
+        .trim()
+        .toLowerCase()
+        .replace(/^--/, '')
+        .replace(/_/g, '-');
+}
+
+function getProviderSpec(provider) {
+    return PROVIDER_CONFIG_SPECS[provider] || { fields: [], required: [] };
+}
+
+function resolveFieldSpec(provider, fieldInput) {
+    const normalized = normalizeFieldToken(fieldInput);
+    const spec = getProviderSpec(provider);
+
+    return spec.fields.find((field) => {
+        const flagMatch = normalizeFieldToken(field.flag) === normalized;
+        const keyMatch = normalizeFieldToken(field.key) === normalized;
+        return flagMatch || keyMatch;
+    });
+}
+
+function setByPath(target, pathKey, value) {
+    const parts = pathKey.split('.');
+    let cursor = target;
+
+    for (let i = 0; i < parts.length - 1; i += 1) {
+        const part = parts[i];
+        cursor[part] = cursor[part] || {};
+        cursor = cursor[part];
+    }
+
+    cursor[parts[parts.length - 1]] = value;
+}
+
+function getByPath(target, pathKey) {
+    const parts = pathKey.split('.');
+    let cursor = target;
+
+    for (const part of parts) {
+        if (!cursor || typeof cursor !== 'object' || !(part in cursor)) {
+            return undefined;
+        }
+        cursor = cursor[part];
+    }
+
+    return cursor;
+}
+
+function hasByPath(target, pathKey) {
+    return typeof getByPath(target, pathKey) !== 'undefined';
+}
+
+function deleteByPath(target, pathKey) {
+    const parts = pathKey.split('.');
+    let cursor = target;
+
+    for (let i = 0; i < parts.length - 1; i += 1) {
+        const part = parts[i];
+        if (!cursor || typeof cursor !== 'object' || !(part in cursor)) {
+            return false;
+        }
+        cursor = cursor[part];
+    }
+
+    const leaf = parts[parts.length - 1];
+    if (!cursor || typeof cursor !== 'object' || !(leaf in cursor)) {
+        return false;
+    }
+
+    delete cursor[leaf];
+    return true;
+}
+
+function parseFlags(args, settings = {}) {
     const options = {
         output: 'json',
-        stack: false
+        stack: false,
+        dynamicFlags: {}
     };
     const rest = [];
+    const allowUnknown = settings.allowUnknown === true;
 
     for (let i = 0; i < args.length; i += 1) {
         const token = args[i];
@@ -62,7 +214,15 @@ function parseFlags(args) {
         } else if (token === '--help' || token === '-h') {
             options.help = true;
         } else if (token.startsWith('--')) {
-            throw new CliError(`Unknown option: ${token}`, 'INVALID_ARGUMENT');
+            if (!allowUnknown) {
+                throw new CliError(`Unknown option: ${token}`, 'INVALID_ARGUMENT');
+            }
+            const next = args[i + 1];
+            if (!next || next.startsWith('--')) {
+                throw new CliError(`Missing value for ${token}.`, 'INVALID_ARGUMENT');
+            }
+            i += 1;
+            options.dynamicFlags[token.slice(2).toLowerCase()] = next;
         } else {
             rest.push(token);
         }
@@ -132,7 +292,8 @@ function printRootHelp(io) {
     io.out('  track <tracking-number> [--carrier <name>] [--output json|text] [--stack]');
     io.out('  guess <tracking-number> [--output json|text]');
     io.out('  carriers list [--output json|text]');
-    io.out('  config set <provider> <key> <value> [--output json|text]');
+    io.out('  config set <provider> --<field> <value> [--<field> <value> ...] [--output json|text]');
+    io.out('  config requirements <provider> [--output json|text]');
     io.out('  config get <provider> [key] [--output json|text]');
     io.out('  config delete <provider> [key] [--output json|text]');
     io.out('  config list [--output json|text]');
@@ -160,13 +321,19 @@ function printConfigHelp(io) {
     io.out('bloodhound config <subcommand> [args] [options]');
     io.out('');
     io.out('Subcommands:');
-    io.out('  set <provider> <key> <value>');
+    io.out('  set <provider> --<field> <value> [--<field> <value> ...]');
+    io.out('  requirements <provider>');
     io.out('  get <provider> [key]');
     io.out('  delete <provider> [key]');
     io.out('  list');
     io.out('');
     io.out('Options:');
     io.out('  --output <format>  Output format: json | text (default: json)');
+    io.out('');
+    io.out('Examples:');
+    io.out('  bloodhound config set usps --consumer-key <value> --consumer-secret <value>');
+    io.out('  bloodhound config set ups --client-id <value> --client-secret <value>');
+    io.out('  bloodhound config requirements fedex');
 }
 
 function printCarriersHelp(io) {
@@ -199,12 +366,12 @@ async function runCli(argv, deps = {}) {
         const [command, ...restArgs] = argv;
 
         if (command === 'config') {
-            const { options, rest } = parseFlags(restArgs);
+            const { options, rest } = parseFlags(restArgs, { allowUnknown: true });
             if (options.help) {
                 printConfigHelp(io);
                 return 0;
             }
-            const [subcommand, providerInput, key, value] = rest;
+            const [subcommand, providerInput, key] = rest;
             const config = await readConfig(configPath);
 
             if (subcommand === 'list') {
@@ -224,6 +391,43 @@ async function runCli(argv, deps = {}) {
                 return 0;
             }
 
+            if (subcommand === 'requirements') {
+                const provider = normalizeProvider(providerInput);
+                if (!provider) {
+                    throw new CliError(
+                        `Unknown provider "${providerInput}". Run "bloodhound carriers list" for valid providers.`,
+                        'UNKNOWN_PROVIDER'
+                    );
+                }
+                const spec = getProviderSpec(provider);
+                const requiredFlags = spec.required.map((field) => `--${field}`);
+                const optionalFlags = spec.fields
+                    .map((field) => field.flag)
+                    .filter((field) => !spec.required.includes(field))
+                    .map((field) => `--${field}`);
+
+                if (options.output === 'json') {
+                    outputJson(io, {
+                        provider,
+                        requiredFlags,
+                        optionalFlags
+                    });
+                } else {
+                    if (!requiredFlags.length && !optionalFlags.length) {
+                        outputText(io, `${provider} does not require additional configuration fields.`);
+                    } else {
+                        outputText(io, `${provider} requirements:`);
+                        if (requiredFlags.length) {
+                            outputText(io, `required: ${requiredFlags.join(', ')}`);
+                        }
+                        if (optionalFlags.length) {
+                            outputText(io, `optional: ${optionalFlags.join(', ')}`);
+                        }
+                    }
+                }
+                return 0;
+            }
+
             const provider = normalizeProvider(providerInput);
             if (!provider) {
                 throw new CliError(
@@ -231,18 +435,77 @@ async function runCli(argv, deps = {}) {
                     'UNKNOWN_PROVIDER'
                 );
             }
+            const providerSpec = getProviderSpec(provider);
 
             if (subcommand === 'set') {
-                if (!key || typeof value === 'undefined') {
-                    throw new CliError('Usage: bloodhound config set <provider> <key> <value>', 'INVALID_ARGUMENT');
+                if (key) {
+                    throw new CliError(
+                        'Usage: bloodhound config set <provider> --<field> <value> [--<field> <value> ...]',
+                        'INVALID_ARGUMENT'
+                    );
                 }
-                config.providers[provider] = config.providers[provider] || {};
-                config.providers[provider][key] = value;
+
+                const providedFieldFlags = options.dynamicFlags;
+                const providedFieldNames = Object.keys(providedFieldFlags);
+
+                if (!providedFieldNames.length) {
+                    throw new CliError(
+                        'No configuration fields provided. Run "bloodhound config requirements <provider>" for fields.',
+                        'INVALID_ARGUMENT'
+                    );
+                }
+
+                if (!providerSpec.fields.length) {
+                    throw new CliError(
+                        `${provider} does not require configuration fields.`,
+                        'INVALID_ARGUMENT'
+                    );
+                }
+
+                const allowedFlagSet = new Set(providerSpec.fields.map((field) => normalizeFieldToken(field.flag)));
+                const unknownFlags = providedFieldNames.filter((flag) => !allowedFlagSet.has(normalizeFieldToken(flag)));
+                if (unknownFlags.length) {
+                    const validFlags = providerSpec.fields.map((field) => `--${field.flag}`).join(', ');
+                    throw new CliError(
+                        `Unknown field(s) for ${provider}: ${unknownFlags.map((flag) => `--${flag}`).join(', ')}. Valid fields: ${validFlags}`,
+                        'INVALID_ARGUMENT'
+                    );
+                }
+
+                const existingProviderConfig = config.providers[provider] || {};
+                const nextProviderConfig = { ...existingProviderConfig };
+
+                for (const fieldSpec of providerSpec.fields) {
+                    const normalizedFlag = normalizeFieldToken(fieldSpec.flag);
+                    if (!(normalizedFlag in providedFieldFlags)) {
+                        continue;
+                    }
+
+                    setByPath(nextProviderConfig, fieldSpec.key, providedFieldFlags[normalizedFlag]);
+                }
+
+                const missingRequired = providerSpec.required.filter((requiredFlag) => {
+                    const requiredField = providerSpec.fields.find((field) => field.flag === requiredFlag);
+                    if (!requiredField) {
+                        return false;
+                    }
+
+                    return !hasByPath(nextProviderConfig, requiredField.key);
+                });
+
+                if (missingRequired.length) {
+                    throw new CliError(
+                        `Missing required fields for ${provider}: ${missingRequired.map((field) => `--${field}`).join(', ')}`,
+                        'INVALID_ARGUMENT'
+                    );
+                }
+
+                config.providers[provider] = nextProviderConfig;
                 await writeConfig(configPath, config);
                 if (options.output === 'json') {
-                    outputJson(io, { ok: true, provider, key, value });
+                    outputJson(io, { ok: true, provider, configuredFlags: providedFieldNames.map((flag) => `--${flag}`) });
                 } else {
-                    outputText(io, `Saved ${provider}.${key}`);
+                    outputText(io, `Saved ${provider} configuration (${providedFieldNames.map((flag) => `--${flag}`).join(', ')})`);
                 }
                 return 0;
             }
@@ -250,13 +513,15 @@ async function runCli(argv, deps = {}) {
             if (subcommand === 'get') {
                 const providerData = config.providers[provider] || {};
                 if (key) {
-                    if (!(key in providerData)) {
-                        throw new CliError(`Config key not found: ${provider}.${key}`, 'NOT_FOUND');
+                    const fieldSpec = resolveFieldSpec(provider, key);
+                    const requestedKey = fieldSpec ? fieldSpec.key : key;
+                    if (!hasByPath(providerData, requestedKey)) {
+                        throw new CliError(`Config key not found: ${provider}.${requestedKey}`, 'NOT_FOUND');
                     }
                     if (options.output === 'json') {
-                        outputJson(io, { provider, key, value: providerData[key] });
+                        outputJson(io, { provider, key: requestedKey, value: getByPath(providerData, requestedKey) });
                     } else {
-                        outputText(io, String(providerData[key]));
+                        outputText(io, String(getByPath(providerData, requestedKey)));
                     }
                 } else if (options.output === 'json') {
                     outputJson(io, { provider, values: providerData });
@@ -274,10 +539,12 @@ async function runCli(argv, deps = {}) {
             if (subcommand === 'delete') {
                 const providerData = config.providers[provider] || {};
                 if (key) {
-                    if (!(key in providerData)) {
-                        throw new CliError(`Config key not found: ${provider}.${key}`, 'NOT_FOUND');
+                    const fieldSpec = resolveFieldSpec(provider, key);
+                    const requestedKey = fieldSpec ? fieldSpec.key : key;
+                    if (!hasByPath(providerData, requestedKey)) {
+                        throw new CliError(`Config key not found: ${provider}.${requestedKey}`, 'NOT_FOUND');
                     }
-                    delete providerData[key];
+                    deleteByPath(providerData, requestedKey);
                     if (!Object.keys(providerData).length) {
                         delete config.providers[provider];
                     }
