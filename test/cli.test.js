@@ -105,6 +105,22 @@ test('config requirements shows provider-required fields', async () => {
     assert.deepEqual(parsed.requiredFlags, ['--api-key', '--secret-key']);
 });
 
+test('top-level set alias returns provider field requirements when values are missing', async () => {
+    const capture = ioCapture();
+    const code = await runCli(['set', 'ups'], {
+        io: capture.io,
+        createBloodhound: () => {
+            throw new Error('should not instantiate bloodhound for config commands');
+        }
+    });
+
+    assert.equal(code, 1);
+    const parsed = JSON.parse(capture.getStderr());
+    assert.match(parsed.error.message, /missing required fields/i);
+    assert.match(parsed.error.message, /--client-id/);
+    assert.match(parsed.error.message, /--client-secret/);
+});
+
 test('guess prints JSON by default', async () => {
     const capture = ioCapture();
     const code = await runCli(['guess', '1Z999AA10123456784'], {

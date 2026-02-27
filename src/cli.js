@@ -363,7 +363,12 @@ async function runCli(argv, deps = {}) {
             return 0;
         }
 
-        const [command, ...restArgs] = argv;
+        let [command, ...restArgs] = argv;
+        const configAliasCommands = new Set(['set', 'get', 'delete', 'list', 'requirements']);
+        if (configAliasCommands.has(command)) {
+            restArgs = [command, ...restArgs];
+            command = 'config';
+        }
 
         if (command === 'config') {
             const { options, rest } = parseFlags(restArgs, { allowUnknown: true });
@@ -449,6 +454,12 @@ async function runCli(argv, deps = {}) {
                 const providedFieldNames = Object.keys(providedFieldFlags);
 
                 if (!providedFieldNames.length) {
+                    if (providerSpec.required.length) {
+                        throw new CliError(
+                            `Missing required fields for ${provider}: ${providerSpec.required.map((field) => `--${field}`).join(', ')}. Run "bloodhound config requirements ${provider}" for details.`,
+                            'INVALID_ARGUMENT'
+                        );
+                    }
                     throw new CliError(
                         'No configuration fields provided. Run "bloodhound config requirements <provider>" for fields.',
                         'INVALID_ARGUMENT'

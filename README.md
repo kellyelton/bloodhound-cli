@@ -28,6 +28,11 @@ Core commands:
 - `config requirements <provider>`: show required credential fields for a provider
 - `config set/get/delete/list`: CRUD provider credential settings
 
+Shorthand aliases are also supported:
+
+- `set/get/delete/list/requirements` map directly to `config` subcommands
+- Example: `bloodhound set ups` returns required fields when missing
+
 ## Output and Error Modes
 
 - Default output is JSON (`--output json`)
