@@ -1,0 +1,32 @@
+{
+  "name": "bloodhound-cli",
+  "version": "1.0.0",
+  "description": "CLI wrapper for @stores.com/bloodhound shipping carrier tracking APIs",
+  "main": "src/cli.js",
+  "scripts": {
+    "test": "node --test --test-reporter=spec"
+  },
+  "keywords": [
+    "bloodhound",
+    "shipping",
+    "tracking",
+    "cli",
+    "ups",
+    "fedex",
+    "usps",
+    "dhl"
+  ],
+  "author": "",
+  "license": "MIT",
+  "type": "commonjs",
+  "bin": {
+    "bloodhound": "./bin/bloodhound.js",
+    "Bloodhound": "./bin/bloodhound.js"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "@stores.com/bloodhound": "^3.3.0"
+  }
+}
