@@ -4,7 +4,7 @@
   "description": "CLI wrapper for @stores.com/bloodhound shipping carrier tracking APIs",
   "main": "src/cli.js",
   "scripts": {
-    "test": "node --test --test-reporter=spec 'test/*.test.js'",
+    "test": "node --test --test-reporter=spec test/changeset-enforcement.test.js test/cli.test.js test/config-store.test.js",
     "prepare": "node scripts/install-git-hooks.js",
     "changeset": "changeset",
     "version-packages": "changeset version",
