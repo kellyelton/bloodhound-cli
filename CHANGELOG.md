@@ -1,5 +1,11 @@
 # bloodhound-cli
 
+## 1.1.3
+
+### Patch Changes
+
+- 6650905: Use git dependency for @stores.com/bloodhound instead of local submodule so transitive dependencies install correctly.
+
 ## 1.1.2
 
 ### Patch Changes
