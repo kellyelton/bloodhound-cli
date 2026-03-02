@@ -30,7 +30,7 @@
     "node": ">=20.0.0"
   },
   "dependencies": {
-    "@stores.com/bloodhound": "^3.3.0"
+    "@stores.com/bloodhound": "file:lib/bloodhound"
   },
   "devDependencies": {
     "@changesets/cli": "^2.29.8"

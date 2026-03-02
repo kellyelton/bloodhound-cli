@@ -354,6 +354,16 @@ async function runCli(argv, deps = {}) {
         // Lazy-load for fast help/config commands and easier tests.
         // eslint-disable-next-line global-require
         const Bloodhound = require('@stores.com/bloodhound');
+
+        // Map USPS config keys (consumer_key/consumer_secret) to the library's expected names (client_id/client_secret)
+        if (options.usps) {
+            options.usps = {
+                ...options.usps,
+                client_id: options.usps.consumer_key,
+                client_secret: options.usps.consumer_secret
+            };
+        }
+
         return new Bloodhound(options);
     });
 

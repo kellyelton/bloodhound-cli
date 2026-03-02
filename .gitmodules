@@ -1,0 +1,4 @@
+[submodule "lib/bloodhound"]
+	path = lib/bloodhound
+	url = git@github.com:kellyelton/bloodhound.git
+	branch = skip-geocoding-and-default-timezone
