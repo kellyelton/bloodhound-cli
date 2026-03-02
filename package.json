@@ -30,7 +30,7 @@
     "node": ">=20.0.0"
   },
   "dependencies": {
-    "@stores.com/bloodhound": "file:lib/bloodhound"
+    "@stores.com/bloodhound": "github:kellyelton/bloodhound#skip-geocoding-and-default-timezone"
   },
   "devDependencies": {
     "@changesets/cli": "^2.29.8"
