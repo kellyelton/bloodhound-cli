@@ -1,5 +1,13 @@
 # bloodhound-cli
 
+## 1.1.2
+
+### Patch Changes
+
+- ef9b8c7: Fix test command for Node 20 compatibility.
+- e5901fe: Fix USPS tracking by mapping consumer_key/consumer_secret to the library's expected client_id/client_secret. Use bloodhound fork with geocoding and timezone improvements as git submodule.
+- 7fb49a2: Scope test runner to test/ directory to prevent running submodule tests in CI.
+
 ## 1.1.1
 
 ### Patch Changes
