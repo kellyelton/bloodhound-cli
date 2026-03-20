@@ -1,5 +1,12 @@
 # bloodhound-cli
 
+## 1.1.4
+
+### Patch Changes
+
+- fc4ae9a: Remove outdated bloodhound dependency note from CLAUDE.md
+- 42005b2: Switch @stores.com/bloodhound from temporary git branch dependency back to npm package now that PR #146 is merged.
+
 ## 1.1.3
 
 ### Patch Changes
